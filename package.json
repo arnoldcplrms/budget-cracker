@@ -3,10 +3,21 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "@expo-google-fonts/baloo-2": "^0.4.2",
+    "@expo-google-fonts/nunito": "^0.4.2",
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-community/datetimepicker": "9.1.0",
     "expo": "~57.0.18",
+    "expo-file-system": "~57.0.6",
+    "expo-font": "~57.0.2",
+    "expo-sharing": "~57.0.16",
+    "expo-splash-screen": "~57.0.8",
+    "expo-sqlite": "~57.0.2",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
-    "react-native": "0.86.3"
+    "react-native": "0.86.3",
+    "react-native-safe-area-context": "~5.7.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -14,9 +25,11 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "android:emulator": "./scripts/run-android-emulator.sh",
+    "android:apk": "./scripts/build-android-apk.sh"
   },
   "private": true
 }
