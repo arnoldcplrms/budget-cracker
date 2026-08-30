@@ -114,42 +114,29 @@ export default function ItemsScreen() {
             data={filteredItems}
             keyExtractor={(i) => String(i.id)}
             contentContainerStyle={{ paddingBottom: SP(20) }}
-            renderItem={({ item }) =>
-              editingId === item.id ? (
-                <View style={{ backgroundColor: C.white, borderRadius: R.card, borderWidth: 1.5, borderColor: C.accent, padding: SP(4), marginBottom: SP(2.5) }}>
-                  <View style={{ flexDirection: 'row', gap: SP(2) }}>
-                    <Field label="Name" value={editForm.name} onChangeText={(t) => setEditForm({ ...editForm, name: t })} />
-                    <Field label="Amount" value={editForm.amount} onChangeText={(t) => setEditForm({ ...editForm, amount: t })} keyboardType="decimal-pad" />
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: SP(2), marginTop: SP(3) }}>
-                    <Btn label="Save" onPress={saveEdit} small />
-                    <Btn label="Cancel" kind="ghost" small onPress={() => { setEditingId(null); setError(null); }} />
-                  </View>
+            renderItem={({ item }) => (
+              <Pressable
+                onPress={() => {
+                  setEditingId(item.id);
+                  setEditForm({ name: item.name, amount: String(item.amount) });
+                  setError(null);
+                }}
+                style={({ pressed }) => [
+                  { backgroundColor: C.white, borderRadius: R.card, borderWidth: 1.5, borderColor: C.line, padding: SP(4), marginBottom: SP(2.5), flexDirection: 'row', alignItems: 'center' },
+                  pressed && { transform: [{ translateY: 1 }], borderColor: C.accent },
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: C.ink }}>{item.name}</Text>
+                  <Text style={{ fontFamily: F.body, fontSize: 12, color: C.inkSoft, marginTop: 2 }}>Tap to edit</Text>
                 </View>
-              ) : (
-                <Pressable
-                  onPress={() => {
-                    setEditingId(item.id);
-                    setEditForm({ name: item.name, amount: String(item.amount) });
-                    setError(null);
-                  }}
-                  style={({ pressed }) => [
-                    { backgroundColor: C.white, borderRadius: R.card, borderWidth: 1.5, borderColor: C.line, padding: SP(4), marginBottom: SP(2.5), flexDirection: 'row', alignItems: 'center' },
-                    pressed && { transform: [{ translateY: 1 }], borderColor: C.accent },
-                  ]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: C.ink }}>{item.name}</Text>
-                    <Text style={{ fontFamily: F.body, fontSize: 12, color: C.inkSoft, marginTop: 2 }}>Tap to edit</Text>
-                  </View>
-                  <Text style={{ fontFamily: F.displayMd, fontSize: 16, color: C.accent, marginRight: SP(3) }}>{money(item.amount)}</Text>
-                  <Btn label="Delete" kind="danger" small onPress={() => confirmDelete(item)} />
-                </Pressable>
-              )
-            }
+                <Text style={{ fontFamily: F.displayMd, fontSize: 16, color: C.accent, marginRight: SP(3) }}>{money(item.amount)}</Text>
+                <Btn label="Delete" kind="danger" small onPress={() => confirmDelete(item)} />
+              </Pressable>
+            )}
           />
         )}
-        <ErrorText msg={editingId != null ? error : null} />
+
       </View>
 
       <Pressable
@@ -202,6 +189,26 @@ export default function ItemsScreen() {
             </View>
             <ErrorText msg={error} />
             <Btn label="Add to library" onPress={submitNew} style={{ marginTop: SP(3), alignSelf: 'center' }} />
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={editingId !== null} transparent animationType="fade" onRequestClose={() => { setEditingId(null); setError(null); }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', paddingHorizontal: SP(5) }}>
+          <Pressable accessibilityLabel="Close edit budget item form" onPress={() => { setEditingId(null); setError(null); }} style={{ position: 'absolute', inset: 0, backgroundColor: '#00000055' }} />
+          <View style={{ backgroundColor: C.paper, borderRadius: 28, padding: SP(5), width: '100%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SP(3) }}>
+              <Text style={{ fontFamily: F.display, fontSize: 24, color: C.ink, flex: 1 }}>Edit budget item</Text>
+              <Pressable accessibilityLabel="Close edit budget item form" onPress={() => { setEditingId(null); setError(null); }} hitSlop={12}>
+                <Ionicons name="close-circle-outline" size={28} color={C.inkSoft} />
+              </Pressable>
+            </View>
+            <View style={{ flexDirection: 'row', gap: SP(2) }}>
+              <Field label="Name" value={editForm.name} onChangeText={(t) => setEditForm({ ...editForm, name: t })} autoFocus />
+              <Field label="Amount" value={editForm.amount} onChangeText={(t) => setEditForm({ ...editForm, amount: t })} keyboardType="decimal-pad" />
+            </View>
+            <ErrorText msg={error} />
+            <Btn label="Save changes" onPress={saveEdit} style={{ marginTop: SP(4), alignSelf: 'center' }} />
           </View>
         </KeyboardAvoidingView>
       </Modal>
