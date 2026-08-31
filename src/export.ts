@@ -4,14 +4,14 @@ import * as Sharing from 'expo-sharing';
 import type { Item, Template } from './db';
 
 export async function exportTemplate(t: Template, items: Item[]) {
-  const spent = items.reduce((s, i) => s + i.amount, 0);
+  const spent = items.reduce((s, i) => s + (i.amount ?? 0), 0);
   const aoa: (string | number)[][] = [
     ['Budget Cracker'],
     ['Template', t.name],
     ['Allotted budget', t.budget],
     [],
     ['Item', 'Amount'],
-    ...items.map((i) => [i.name, i.amount]),
+    ...items.map((i) => [i.name, i.amount ?? 'Unpriced']),
     [],
     ['Total', spent],
     ['Remaining', t.budget - spent],

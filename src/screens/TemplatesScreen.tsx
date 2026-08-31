@@ -20,7 +20,10 @@ function EnvelopeCard({ row, onOpen, onEdit, onDeleted }: { row: db.TemplateRow;
       <Pressable onPress={onOpen} style={({ pressed }) => [{ backgroundColor: envelopeOf(row.id), borderRadius: R.card, borderWidth: 1.5, borderColor: C.ink + '22', padding: SP(4) }, pressed && { transform: [{ translateY: 2 }] }]}>
         <View style={{ borderBottomWidth: 1.5, borderStyle: 'dashed', borderColor: C.ink + '33', paddingBottom: SP(2.5), marginBottom: SP(3) }}>
           <Text style={{ fontFamily: F.display, fontSize: 19, color: C.ink, flexShrink: 1 }}>{row.name}</Text>
-          <Text style={{ fontFamily: F.body, fontSize: 12, color: C.inkSoft, marginTop: 1 }}>Updated {relativeTime(row.updated_at)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontFamily: F.body, fontSize: 12, color: C.inkSoft, marginTop: 1, flexShrink: 1 }}>Updated {relativeTime(row.updated_at)}</Text>
+            <Text style={{ fontFamily: F.bodyXBold, fontSize: 12, color: C.inkSoft, marginLeft: SP(2) }}>{row.items} item{row.items === 1 ? '' : 's'}</Text>
+          </View>
         </View>
         <View style={{ flexDirection: 'row', gap: SP(2) }}>
           <View style={{ flex: 1, minWidth: 0 }}>

@@ -6,6 +6,28 @@ import * as db from '../db';
 import { exportTemplate } from '../export';
 import { Btn, ErrorText, Field } from '../ui';
 
+type ItemKind = 'fixed' | 'needsPrice';
+
+function NeedsPricePill() {
+  return (
+    <View style={{ alignSelf: 'center', backgroundColor: C.warningSoft, borderRadius: R.pill, paddingHorizontal: SP(1.5), paddingVertical: SP(0.5), marginLeft: SP(1) }}>
+      <Text style={{ fontFamily: F.bodyXBold, fontSize: 10, color: C.warning }}>Unpriced</Text>
+    </View>
+  );
+}
+
+function ItemKindToggle({ value, onChange }: { value: ItemKind; onChange: (value: ItemKind) => void }) {
+  return (
+    <View style={{ flexDirection: 'row', backgroundColor: C.white, borderRadius: R.input, borderWidth: 1.5, borderColor: C.line, padding: SP(1), marginBottom: SP(3) }}>
+      {(['fixed', 'needsPrice'] as const).map((kind) => (
+        <Pressable key={kind} onPress={() => onChange(kind)} style={{ flex: 1, alignItems: 'center', paddingVertical: SP(2), borderRadius: R.input, backgroundColor: value === kind ? C.accentSoft : 'transparent' }}>
+          <Text style={{ fontFamily: F.bodyXBold, fontSize: 13, color: value === kind ? C.accent : C.inkSoft }}>{kind === 'fixed' ? 'Fixed price' : 'Unpriced'}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export default function TemplateDetailScreen({ id, onBack }: { id: number; onBack: () => void }) {
   const [tpl, setTpl] = useState<db.Template | null>(null);
   const [stuffed, setStuffed] = useState<db.Item[]>([]);
@@ -14,7 +36,10 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
   const [section, setSection] = useState<'stuffed' | 'add'>('stuffed');
   const [showNew, setShowNew] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', amount: '' });
+  const [newItemType, setNewItemType] = useState<ItemKind>('fixed');
   const [itemScope, setItemScope] = useState<'envelope' | 'library'>('library');
+  const [priceItem, setPriceItem] = useState<db.Item | null>(null);
+  const [priceText, setPriceText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
@@ -30,7 +55,7 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
   }, [load]);
 
   if (!tpl) return null;
-  const spent = stuffed.reduce((s, i) => s + i.amount, 0);
+  const spent = stuffed.reduce((s, i) => s + (i.amount ?? 0), 0);
   const left = tpl.budget - spent;
   const over = left < 0;
   const spentPercent = (spent / tpl.budget) * 100;
@@ -44,13 +69,14 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
   };
 
   const addNew = async () => {
-    const amount = parseAmount(newItem.amount);
+    const amount = newItemType === 'needsPrice' ? null : parseAmount(newItem.amount);
     if (!newItem.name.trim()) return setError('Give the item a name.');
-    if (!amount) return setError('Amount must be a number above zero.');
+    if (newItemType === 'fixed' && !amount) return setError('Amount must be a number above zero.');
     try {
       const r = await db.createItem(newItem.name, amount, itemScope === 'library');
       await db.linkItem(id, r.lastInsertRowId as number);
       setNewItem({ name: '', amount: '' });
+      setNewItemType('fixed');
       setItemScope('library');
       setShowNew(false);
       setError(null);
@@ -58,6 +84,23 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
     } catch (e) {
       setError((e as Error).message);
     }
+  };
+
+  const openPriceEditor = (item: db.Item) => {
+    setPriceItem(item);
+    setPriceText('');
+    setError(null);
+  };
+
+  const savePrice = async () => {
+    if (!priceItem) return;
+    const amount = parseAmount(priceText);
+    if (!amount) return setError('Amount must be a number above zero.');
+    await db.setTemplateItemAmount(id, priceItem.id, amount);
+    setPriceItem(null);
+    setPriceText('');
+    setError(null);
+    load();
   };
 
   const doExport = async () => {
@@ -132,9 +175,15 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
             <Text style={{ fontFamily: F.display, fontSize: 19, color: C.ink, marginBottom: SP(2) }}>Stuffed items</Text>
             {stuffed.length === 0 ? <Text style={{ fontFamily: F.body, fontSize: 14, color: C.inkSoft, marginBottom: SP(4) }}>Nothing inside yet — add items below.</Text> : stuffed.map((i) => (
               <View key={i.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, borderRadius: R.input, borderWidth: 1.5, borderColor: C.line, paddingHorizontal: SP(4), paddingVertical: SP(3), marginBottom: SP(2) }}>
-                <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: C.ink, flex: 1 }}>{i.name}</Text>
-                <Text style={{ fontFamily: F.bodyXBold, fontSize: 15, color: C.ink, marginRight: SP(3) }}>{money(i.amount)}</Text>
-                <Btn label="✕" kind="danger" small onPress={() => db.unlinkItem(id, i.id).then(load)} />
+                <Pressable disabled={i.amount !== null} onPress={i.amount == null ? () => openPriceEditor(i) : undefined} style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: C.ink, flexShrink: 1 }}>{i.name}</Text>
+                    {i.amount == null ? <NeedsPricePill /> : null}
+                  </View>
+                  {i.amount == null ? <Text style={{ fontFamily: F.body, fontSize: 12, color: C.warning, marginTop: 2 }}>Tap to add a price</Text> : null}
+                </Pressable>
+                {i.amount == null ? <View style={{ width: SP(1) }} /> : <Text style={{ fontFamily: F.bodyXBold, fontSize: 15, color: C.ink, marginLeft: SP(3) }}>{money(i.amount)}</Text>}
+                <View style={{ marginLeft: SP(3) }}><Btn label="✕" kind="danger" small onPress={() => db.unlinkItem(id, i.id).then(load)} /></View>
               </View>
             ))}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: C.accentSoft, borderRadius: R.input, paddingHorizontal: SP(4), paddingVertical: SP(3), marginTop: SP(1) }}>
@@ -148,9 +197,12 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
             <TextInput value={query} onChangeText={setQuery} placeholder="Search your library…" placeholderTextColor={C.inkSoft + '99'} style={{ fontFamily: F.body, fontSize: 15, color: C.ink, backgroundColor: C.white, borderWidth: 1.5, borderColor: C.line, borderRadius: R.input, paddingHorizontal: SP(3), paddingVertical: SP(2), marginBottom: SP(2) }} />
             {matches.filter((i) => !i.added).map((i) => (
               <View key={i.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, borderRadius: R.input, borderWidth: 1.5, borderColor: C.line, paddingHorizontal: SP(4), paddingVertical: SP(2), marginBottom: SP(2) }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontFamily: F.bodyBold, fontSize: 14, color: C.ink }}>{i.name}</Text>
-                  <Text style={{ fontFamily: F.body, fontSize: 12, color: C.inkSoft }}>{money(i.amount)}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Text style={{ fontFamily: F.bodyBold, fontSize: 14, color: C.ink, flexShrink: 1 }}>{i.name}</Text>
+                    {i.amount == null ? <NeedsPricePill /> : null}
+                  </View>
+                  {i.amount == null ? <Text style={{ fontFamily: F.body, fontSize: 12, color: C.warning }}>Tap to add a price</Text> : <Text style={{ fontFamily: F.body, fontSize: 12, color: C.inkSoft }}>{money(i.amount)}</Text>}
                 </View>
                 <Btn label="+ Add" kind="ghost" small onPress={() => addExisting(i.id)} />
               </View>
@@ -168,10 +220,15 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
               <Text style={{ fontFamily: F.display, fontSize: 24, color: C.ink, flex: 1 }}>New budget item</Text>
               <Pressable accessibilityLabel="Close new budget item form" onPress={() => setShowNew(false)} hitSlop={12}><Ionicons name="close-circle-outline" size={28} color={C.inkSoft} /></Pressable>
             </View>
-            <View style={{ flexDirection: 'row', gap: SP(2) }}>
-              <Field label="Name" value={newItem.name} onChangeText={(t) => setNewItem({ ...newItem, name: t })} placeholder="Petrol" autoFocus />
-              <Field label="Amount" value={newItem.amount} onChangeText={(t) => setNewItem({ ...newItem, amount: t })} placeholder="0.00" keyboardType="decimal-pad" />
-            </View>
+            <ItemKindToggle value={newItemType} onChange={setNewItemType} />
+            {newItemType === 'fixed' ? (
+              <View style={{ flexDirection: 'row', gap: SP(2) }}>
+                <Field label="Name" value={newItem.name} onChangeText={(t) => setNewItem({ ...newItem, name: t })} placeholder="Petrol" autoFocus />
+                <Field label="Amount" value={newItem.amount} onChangeText={(t) => setNewItem({ ...newItem, amount: t })} placeholder="0.00" keyboardType="decimal-pad" />
+              </View>
+            ) : (
+              <Field label="Name" value={newItem.name} onChangeText={(t) => setNewItem({ ...newItem, name: t })} placeholder="Rent" autoFocus fullWidth />
+            )}
             <Text style={{ fontFamily: F.bodyBold, fontSize: 13, color: C.inkSoft, marginTop: SP(4), marginBottom: SP(2) }}>Add this item to</Text>
             <View style={{ flexDirection: 'row', gap: SP(2) }}>
               <Pressable accessibilityRole="radio" accessibilityState={{ selected: itemScope === 'envelope' }} onPress={() => setItemScope('envelope')} style={{ flex: 1, backgroundColor: itemScope === 'envelope' ? C.accentSoft : C.white, borderWidth: itemScope === 'envelope' ? 2 : 1.5, borderColor: itemScope === 'envelope' ? C.accent : C.line, borderRadius: R.input, padding: SP(3) }}>
@@ -187,6 +244,22 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
             </View>
             <ErrorText msg={error} />
             <Btn label={itemScope === 'library' ? 'Add to library' : 'Add to this envelope'} onPress={addNew} style={{ marginTop: SP(4), alignSelf: 'center' }} />
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={priceItem !== null} transparent animationType="fade" onRequestClose={() => { setPriceItem(null); setPriceText(''); setError(null); }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', paddingHorizontal: SP(5) }}>
+          <Pressable accessibilityLabel="Close price form" onPress={() => { setPriceItem(null); setPriceText(''); setError(null); }} style={{ position: 'absolute', inset: 0, backgroundColor: '#00000055' }} />
+          <View style={{ backgroundColor: C.paper, borderRadius: 28, padding: SP(5), width: '100%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SP(3) }}>
+              <Text style={{ fontFamily: F.display, fontSize: 24, color: C.ink, flex: 1 }}>Fill in the price</Text>
+              <Pressable accessibilityLabel="Close price form" onPress={() => { setPriceItem(null); setPriceText(''); setError(null); }} hitSlop={12}><Ionicons name="close-circle-outline" size={28} color={C.inkSoft} /></Pressable>
+            </View>
+            <Text style={{ fontFamily: F.body, fontSize: 14, color: C.inkSoft, marginBottom: SP(3) }}>{priceItem?.name}</Text>
+            <Field label="Amount" value={priceText} onChangeText={setPriceText} placeholder="0.00" keyboardType="decimal-pad" autoFocus fullWidth />
+            <ErrorText msg={error} />
+            <Btn label="Save price" onPress={savePrice} style={{ marginTop: SP(4), alignSelf: 'center' }} />
           </View>
         </KeyboardAvoidingView>
       </Modal>

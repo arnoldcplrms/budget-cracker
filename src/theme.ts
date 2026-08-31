@@ -10,6 +10,8 @@ export type Palette = {
   accentSoft: string;
   danger: string;
   dangerSoft: string;
+  warning: string;
+  warningSoft: string;
   envelopes: string[];
 };
 
@@ -26,6 +28,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#E2EFE7',
     danger: '#C4482F',
     dangerSoft: '#F8E4DC',
+    warning: '#9A6700',
+    warningSoft: '#F8E7B4',
     envelopes: ['#CFE8D6', '#F7E4B0', '#CBE0F2', '#F3D5D0'],
   },
   {
@@ -40,6 +44,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#EEE3F4',
     danger: '#C54D62',
     dangerSoft: '#F8E1E6',
+    warning: '#986516',
+    warningSoft: '#F8E8B9',
     envelopes: ['#E9D8F2', '#F7E3B3', '#D8E7F5', '#F4D4DF'],
   },
   {
@@ -54,6 +60,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#DDF0F1',
     danger: '#C45B4E',
     dangerSoft: '#F7E3DF',
+    warning: '#876714',
+    warningSoft: '#F5E9BB',
     envelopes: ['#CBE9E5', '#F5E5B7', '#CFE1F2', '#F2D6D3'],
   },
   {
@@ -68,6 +76,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#F8E6D8',
     danger: '#B84848',
     dangerSoft: '#F8DFDB',
+    warning: '#995B18',
+    warningSoft: '#F8E7BF',
     envelopes: ['#D9E9D2', '#F8DFAC', '#D4E4F0', '#F5D0C4'],
   },
   {
@@ -82,6 +92,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#F7E1E8',
     danger: '#B74747',
     dangerSoft: '#F8DFDF',
+    warning: '#9B6020',
+    warningSoft: '#F8E6C6',
     envelopes: ['#D8E9D7', '#F8E3B3', '#D8E6F2', '#F4CFDA'],
   },
   {
@@ -96,6 +108,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#F5EDC9',
     danger: '#B74C3C',
     dangerSoft: '#F8E0DA',
+    warning: '#8A6C00',
+    warningSoft: '#F5EDC9',
     envelopes: ['#D9EAD0', '#F8E4A5', '#D3E4EF', '#F3D4D0'],
   },
   {
@@ -110,6 +124,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#E7E9FA',
     danger: '#BD5360',
     dangerSoft: '#F7E0E5',
+    warning: '#8A6512',
+    warningSoft: '#F2E9BE',
     envelopes: ['#D7E9E2', '#F7E5B5', '#D6E3F5', '#EAD7EE'],
   },
   {
@@ -124,6 +140,8 @@ export const PALETTES: Palette[] = [
     accentSoft: '#DDEEE1',
     danger: '#BC5547',
     dangerSoft: '#F7E1DC',
+    warning: '#7C6511',
+    warningSoft: '#EDE8BD',
     envelopes: ['#CFE7D1', '#F5E4B5', '#D2E3EF', '#F0D5D4'],
   },
 ];

@@ -3,21 +3,22 @@ import { Image, Platform, Pressable, StatusBar, Text, View } from 'react-native'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts, Baloo2_700Bold, Baloo2_600SemiBold } from '@expo-google-fonts/baloo-2';
-import { Nunito_400Regular, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
+import { Nunito_400Regular, Nunito_400Regular_Italic, Nunito_700Bold, Nunito_700Bold_Italic, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
 import { applyCurrency, applyPalette, C, F, R, SP } from './src/theme';
 import { getCurrencyId, getPaletteId, initDb, saveCurrencyId, savePaletteId } from './src/db';
 import ItemsScreen from './src/screens/ItemsScreen';
 import TemplatesScreen from './src/screens/TemplatesScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import TemplateDetailScreen from './src/screens/TemplateDetailScreen';
+import NotesScreen from './src/screens/NotesScreen';
 
 type Nav = { screen: 'tabs' } | { screen: 'template'; id: number };
-type TabId = 'list' | 'items' | 'settings';
+type TabId = 'list' | 'items' | 'notes' | 'settings';
 
 type TabItemProps = {
   label: string;
   active: boolean;
-  icon: 'wallet-outline' | 'wallet' | 'receipt-outline' | 'receipt' | 'settings-outline' | 'settings';
+  icon: 'wallet-outline' | 'wallet' | 'receipt-outline' | 'receipt' | 'reader-outline' | 'reader' | 'settings-outline' | 'settings';
   onPress: () => void;
 };
 
@@ -64,6 +65,7 @@ function BottomTabs({ tab, onChange, bottomInset }: { tab: TabId; onChange: (tab
     >
       <TabItem label="Budget List" active={tab === 'list'} icon={tab === 'list' ? 'wallet' : 'wallet-outline'} onPress={() => onChange('list')} />
       <TabItem label="Budget Items" active={tab === 'items'} icon={tab === 'items' ? 'receipt' : 'receipt-outline'} onPress={() => onChange('items')} />
+      <TabItem label="Notes" active={tab === 'notes'} icon={tab === 'notes' ? 'reader' : 'reader-outline'} onPress={() => onChange('notes')} />
       <TabItem label="Settings" active={tab === 'settings'} icon={tab === 'settings' ? 'settings' : 'settings-outline'} onPress={() => onChange('settings')} />
     </View>
   );
@@ -74,7 +76,9 @@ function AppContent() {
     Baloo2_700Bold,
     Baloo2_600SemiBold,
     Nunito_400Regular,
+    Nunito_400Regular_Italic,
     Nunito_700Bold,
+    Nunito_700Bold_Italic,
     Nunito_800ExtraBold,
   });
   const [dbReady, setDbReady] = useState(false);
@@ -135,6 +139,8 @@ function AppContent() {
               <TemplatesScreen onOpen={(id) => setNav({ screen: 'template', id })} />
             ) : tab === 'items' ? (
               <ItemsScreen />
+            ) : tab === 'notes' ? (
+              <NotesScreen />
             ) : (
               <SettingsScreen paletteId={paletteId} currencyId={currencyId} onPaletteChange={changePalette} onCurrencyChange={changeCurrency} />
             )}
