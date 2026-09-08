@@ -183,6 +183,21 @@ export async function createTemplate(name: string, budget: number) {
   return result;
 }
 
+export async function duplicateTemplate(sourceId: number, name: string, budget: number) {
+  let templateId = 0;
+  await db.withTransactionAsync(async () => {
+    const result = await db.runAsync('INSERT INTO templates(name, budget, updated_at) VALUES(?, ?, ?)', name.trim(), budget, Date.now());
+    templateId = result.lastInsertRowId;
+    await db.runAsync(
+      `INSERT INTO template_items(template_id, item_id, amount_override)
+       SELECT ?, item_id, amount_override FROM template_items WHERE template_id = ?`,
+      templateId,
+      sourceId
+    );
+  });
+  return templateId;
+}
+
 export const updateTemplate = (id: number, name: string, budget: number) =>
   db.runAsync('UPDATE templates SET name = ?, budget = ?, updated_at = ? WHERE id = ?', name.trim(), budget, Date.now(), id);
 

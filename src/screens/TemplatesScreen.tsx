@@ -11,7 +11,7 @@ const EMPTY: Form = { name: '', budget: '' };
 
 const formatDate = (date: Date) => date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 
-function EnvelopeCard({ row, onOpen, onEdit, onDeleted }: { row: db.TemplateRow; onOpen: () => void; onEdit: () => void; onDeleted: () => void }) {
+function EnvelopeCard({ row, onOpen, onEdit, onDuplicate, onDeleted }: { row: db.TemplateRow; onOpen: () => void; onEdit: () => void; onDuplicate: () => void; onDeleted: () => void }) {
   const left = row.budget - row.spent;
   const over = left < 0;
   return (
@@ -39,9 +39,10 @@ function EnvelopeCard({ row, onOpen, onEdit, onDeleted }: { row: db.TemplateRow;
             <Text style={{ fontFamily: F.displayMd, fontSize: 16, color: over ? C.danger : C.accent, flexShrink: 1 }}>{money(left)}</Text>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: SP(3), marginTop: SP(3) }}>
-          <Btn label="Delete" kind="danger" onPress={() => Alert.alert('Delete envelope', `Delete "${row.name}"? Budget items in your library stay.`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => db.deleteTemplate(row.id).then(onDeleted) }])} style={{ minWidth: 82, paddingVertical: SP(1.25) }} small />
-          <Btn label="Edit" kind="ghost" onPress={onEdit} style={{ minWidth: 82, paddingVertical: SP(1.25) }} small />
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: SP(2), marginTop: SP(3) }}>
+          <Btn label="Delete" icon="trash-outline" kind="danger" iconOnly small onPress={() => Alert.alert('Delete envelope', `Delete "${row.name}"? Budget items in your library stay.`, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => db.deleteTemplate(row.id).then(onDeleted) }])} />
+          <Btn label="Edit" icon="create-outline" kind="ghost" iconOnly small onPress={onEdit} />
+          <Btn label="Duplicate" icon="copy-outline" kind="ghost" iconOnly small onPress={onDuplicate} />
         </View>
       </Pressable>
     </View>
@@ -52,6 +53,7 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
   const [rows, setRows] = useState<db.TemplateRow[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [duplicatingFrom, setDuplicatingFrom] = useState<db.TemplateRow | null>(null);
   const [form, setForm] = useState<Form>(EMPTY);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
@@ -66,6 +68,7 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
+    setDuplicatingFrom(null);
     setForm(EMPTY);
     setNameMode('custom');
     setError(null);
@@ -74,7 +77,19 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
 
   const openNewForm = () => {
     setEditingId(null);
+    setDuplicatingFrom(null);
     setForm(EMPTY);
+    setNameMode('custom');
+    setRangeStart(new Date());
+    setRangeEnd(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+    setError(null);
+    setShowForm(true);
+  };
+
+  const openDuplicateForm = (row: db.TemplateRow) => {
+    setEditingId(null);
+    setDuplicatingFrom(row);
+    setForm({ name: `Copy_of_${row.name}`, budget: String(row.budget) });
     setNameMode('custom');
     setRangeStart(new Date());
     setRangeEnd(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
@@ -89,6 +104,7 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
     if (nameMode === 'dateRange' && rangeEnd < rangeStart) return setError('End date must be after the start date.');
     if (!budget) return setError('Budget must be a number above zero.');
     if (editingId != null) await db.updateTemplate(editingId, name, budget);
+    else if (duplicatingFrom != null) await db.duplicateTemplate(duplicatingFrom.id, name, budget);
     else await db.createTemplate(name, budget);
     closeForm();
     load();
@@ -96,6 +112,7 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
 
   const startEdit = (row: db.TemplateRow) => {
     setEditingId(row.id);
+    setDuplicatingFrom(null);
     setForm({ name: row.name, budget: String(row.budget) });
     setNameMode('custom');
     setShowForm(true);
@@ -118,7 +135,7 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
             <Text style={{ fontFamily: F.body, fontSize: 14, color: C.inkSoft, marginTop: SP(1) }}>Try a different search.</Text>
           </View>
         ) : (
-          <FlatList data={rows.filter((row) => row.name.toLowerCase().includes(query.trim().toLowerCase()))} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingBottom: SP(20) }} renderItem={({ item }) => <EnvelopeCard row={item} onOpen={() => onOpen(item.id)} onEdit={() => startEdit(item)} onDeleted={load} />} />
+          <FlatList data={rows.filter((row) => row.name.toLowerCase().includes(query.trim().toLowerCase()))} keyExtractor={(r) => String(r.id)} contentContainerStyle={{ paddingBottom: SP(20) }} renderItem={({ item }) => <EnvelopeCard row={item} onOpen={() => onOpen(item.id)} onEdit={() => startEdit(item)} onDuplicate={() => openDuplicateForm(item)} onDeleted={load} />} />
         )}
       </View>
 
@@ -131,7 +148,7 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
           <Pressable accessibilityLabel="Close envelope form" onPress={closeForm} style={{ position: 'absolute', inset: 0, backgroundColor: '#00000055' }} />
           <View style={{ backgroundColor: C.paper, borderRadius: 28, padding: SP(5), width: '100%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: SP(3) }}>
-              <Text style={{ fontFamily: F.display, fontSize: 24, color: C.ink, flex: 1 }}>{editingId != null ? 'Edit envelope' : 'New envelope'}</Text>
+              <Text style={{ fontFamily: F.display, fontSize: 24, color: C.ink, flex: 1 }}>{editingId != null ? 'Edit envelope' : duplicatingFrom != null ? 'Duplicate envelope' : 'New envelope'}</Text>
               <Pressable accessibilityLabel="Close envelope form" onPress={closeForm} hitSlop={12}><Ionicons name="close-circle-outline" size={28} color={C.inkSoft} /></Pressable>
             </View>
 
@@ -174,7 +191,7 @@ export default function TemplatesScreen({ onOpen }: { onOpen: (id: number) => vo
               </View>
             )}
             <ErrorText msg={error} />
-            <Btn label={editingId != null ? 'Save changes' : 'Create envelope'} onPress={submit} style={{ marginTop: SP(4), alignSelf: 'center' }} />
+            <Btn label={editingId != null ? 'Save changes' : duplicatingFrom != null ? 'Duplicate envelope' : 'Create envelope'} onPress={submit} style={{ marginTop: SP(4), alignSelf: 'center' }} />
           </View>
         </KeyboardAvoidingView>
       </Modal>

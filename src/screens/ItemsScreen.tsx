@@ -160,7 +160,7 @@ export default function ItemsScreen() {
                   <Text style={{ fontFamily: F.body, fontSize: 12, color: C.inkSoft, marginTop: 2 }}>Tap to edit</Text>
                 </View>
                 {item.amount == null ? <View style={{ width: SP(1) }} /> : <Text style={{ fontFamily: F.displayMd, fontSize: 16, color: C.accent, marginRight: SP(3) }}>{money(item.amount)}</Text>}
-                <Btn label="Delete" kind="danger" small onPress={() => confirmDelete(item)} />
+                <Btn label="Delete" icon="trash-outline" kind="danger" iconOnly small onPress={() => confirmDelete(item)} />
               </Pressable>
             )}
           />

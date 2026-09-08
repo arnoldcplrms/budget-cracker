@@ -1,4 +1,5 @@
 import { Pressable, Text, TextInput, View, ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { C, F, R, SP } from './theme';
 
 // Chunky press-down button. Kind picks the fill.
@@ -7,33 +8,43 @@ export function Btn({
   onPress,
   kind = 'primary',
   small,
+  icon,
+  iconOnly,
   style,
 }: {
   label: string;
   onPress: () => void;
   kind?: 'primary' | 'ghost' | 'danger';
   small?: boolean;
+  icon?: 'trash-outline' | 'create-outline' | 'copy-outline';
+  iconOnly?: boolean;
   style?: ViewStyle;
 }) {
   const fills = { primary: [C.accent, C.onAccent], ghost: [C.accentSoft, C.accent], danger: [C.dangerSoft, C.danger] };
   const [bg, fg] = fills[kind];
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => [
         {
           backgroundColor: bg,
           borderRadius: R.pill,
-          paddingHorizontal: small ? SP(3.5) : SP(5),
-          paddingVertical: small ? SP(1.5) : SP(2.5),
           alignItems: 'center',
           justifyContent: 'center',
+          flexDirection: 'row',
+          gap: icon ? SP(1) : 0,
+          ...(iconOnly
+            ? { padding: small ? SP(2.5) : SP(3.5) }
+            : { paddingHorizontal: small ? SP(3.5) : SP(5), paddingVertical: small ? SP(1.5) : SP(2.5) }),
         },
         pressed && { transform: [{ translateY: 2 }], opacity: 0.9 },
         style,
       ]}
     >
-      <Text style={{ fontFamily: F.bodyXBold, color: fg, fontSize: small ? 13 : 16 }}>{label}</Text>
+      {icon && <Ionicons name={icon} size={iconOnly ? (small ? 18 : 22) : small ? 16 : 20} color={fg} />}
+      {!iconOnly && <Text style={{ fontFamily: F.bodyXBold, color: fg, fontSize: small ? 13 : 16 }}>{label}</Text>}
     </Pressable>
   );
 }
