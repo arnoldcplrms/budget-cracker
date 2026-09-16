@@ -61,6 +61,7 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
   const spentPercent = (spent / tpl.budget) * 100;
   const progressPercent = Math.min(100, Math.max(0, spentPercent));
   const matches = library.filter((i) => i.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const available = matches.filter((i) => !i.added);
 
   const addExisting = async (itemId: number) => {
     await db.linkItem(id, itemId);
@@ -195,7 +196,7 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
           <View>
             <Text style={{ fontFamily: F.display, fontSize: 19, color: C.ink, marginBottom: SP(2) }}>Add items</Text>
             <TextInput value={query} onChangeText={setQuery} placeholder="Search your library…" placeholderTextColor={C.inkSoft + '99'} style={{ fontFamily: F.body, fontSize: 15, color: C.ink, backgroundColor: C.white, borderWidth: 1.5, borderColor: C.line, borderRadius: R.input, paddingHorizontal: SP(3), paddingVertical: SP(2), marginBottom: SP(2) }} />
-            {matches.filter((i) => !i.added).map((i) => (
+            {available.map((i) => (
               <View key={i.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, borderRadius: R.input, borderWidth: 1.5, borderColor: C.line, paddingHorizontal: SP(4), paddingVertical: SP(2), marginBottom: SP(2) }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -207,10 +208,26 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
                 <Btn label="+ Add" kind="ghost" small onPress={() => addExisting(i.id)} />
               </View>
             ))}
-            <Btn label="+ New budget item" onPress={() => { setShowNew(true); setError(null); }} style={{ alignSelf: 'center', marginTop: SP(2) }} />
+            {available.length === 0 ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SP(2), paddingVertical: SP(4) }}>
+                <Ionicons name="cube-outline" size={22} color={C.inkSoft} />
+                <Text style={{ fontFamily: F.body, fontSize: 14, color: C.inkSoft }}>No more items to add</Text>
+              </View>
+            ) : null}
           </View>
         )}
       </ScrollView>
+
+      {section === 'add' ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="New budget item"
+          onPress={() => { setShowNew(true); setError(null); }}
+          style={({ pressed }) => [{ position: 'absolute', right: SP(5), bottom: SP(4), width: SP(14), height: SP(14), borderRadius: SP(7), backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center', elevation: 5, shadowColor: C.ink, shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } }, pressed && { transform: [{ scale: 0.94 }], opacity: 0.86 }]}
+        >
+          <Ionicons name="add" size={29} color={C.onAccent} />
+        </Pressable>
+      ) : null}
 
       <Modal visible={showNew} transparent animationType="fade" onRequestClose={() => setShowNew(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', paddingHorizontal: SP(5) }}>
