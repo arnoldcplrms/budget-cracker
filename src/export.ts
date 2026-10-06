@@ -1,10 +1,10 @@
 import * as XLSX from 'xlsx';
 import { EncodingType, File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import type { Item, Template } from './db';
+import type { Template, TemplateItem } from './db';
 
-export async function exportTemplate(t: Template, items: Item[]) {
-  const spent = items.reduce((s, i) => s + (i.amount ?? 0), 0);
+export async function exportTemplate(t: Template, items: TemplateItem[]) {
+  const spent = items.reduce((s, i) => s + (i.checked ? (i.amount ?? 0) : 0), 0);
   const aoa: (string | number)[][] = [
     ['Budget Cracker'],
     ['Template', t.name],

@@ -30,7 +30,7 @@ function ItemKindToggle({ value, onChange }: { value: ItemKind; onChange: (value
 
 export default function TemplateDetailScreen({ id, onBack }: { id: number; onBack: () => void }) {
   const [tpl, setTpl] = useState<db.Template | null>(null);
-  const [stuffed, setStuffed] = useState<db.Item[]>([]);
+  const [stuffed, setStuffed] = useState<db.TemplateItem[]>([]);
   const [library, setLibrary] = useState<db.LibraryItem[]>([]);
   const [query, setQuery] = useState('');
   const [section, setSection] = useState<'stuffed' | 'add'>('stuffed');
@@ -46,7 +46,7 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
   const load = useCallback(async () => {
     const [t, s, lib] = await Promise.all([db.getTemplate(id), db.templateItems(id), db.libraryForTemplate(id)]);
     setTpl(t);
-    setStuffed(s);
+    setStuffed(s.map((item) => ({ ...item, checked: Boolean(item.checked) })));
     setLibrary(lib);
   }, [id]);
 
@@ -55,7 +55,7 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
   }, [load]);
 
   if (!tpl) return null;
-  const spent = stuffed.reduce((s, i) => s + (i.amount ?? 0), 0);
+  const spent = stuffed.reduce((s, i) => s + (i.checked ? (i.amount ?? 0) : 0), 0);
   const left = tpl.budget - spent;
   const over = left < 0;
   const spentPercent = (spent / tpl.budget) * 100;
@@ -85,6 +85,11 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
     } catch (e) {
       setError((e as Error).message);
     }
+  };
+
+  const toggleSpent = async (item: db.TemplateItem) => {
+    await db.setTemplateItemChecked(id, item.id, !item.checked);
+    load();
   };
 
   const openPriceEditor = (item: db.Item) => {
@@ -176,6 +181,16 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
             <Text style={{ fontFamily: F.display, fontSize: 19, color: C.ink, marginBottom: SP(2) }}>Stuffed items</Text>
             {stuffed.length === 0 ? <Text style={{ fontFamily: F.body, fontSize: 14, color: C.inkSoft, marginBottom: SP(4) }}>Nothing inside yet — add items below.</Text> : stuffed.map((i) => (
               <View key={i.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: C.white, borderRadius: R.input, borderWidth: 1.5, borderColor: C.line, paddingHorizontal: SP(4), paddingVertical: SP(3), marginBottom: SP(2) }}>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={`${i.name} counts toward spent`}
+                  accessibilityState={{ checked: i.checked }}
+                  hitSlop={8}
+                  onPress={() => toggleSpent(i)}
+                  style={{ marginRight: SP(2), padding: SP(1) }}
+                >
+                  <Ionicons name={i.checked ? 'checkmark-circle' : 'ellipse-outline'} size={25} color={i.checked ? C.accent : C.inkSoft} />
+                </Pressable>
                 <Pressable disabled={i.amount !== null} onPress={i.amount == null ? () => openPriceEditor(i) : undefined} style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                     <Text style={{ fontFamily: F.bodyBold, fontSize: 15, color: C.ink, flexShrink: 1 }}>{i.name}</Text>
@@ -184,11 +199,11 @@ export default function TemplateDetailScreen({ id, onBack }: { id: number; onBac
                   {i.amount == null ? <Text style={{ fontFamily: F.body, fontSize: 12, color: C.warning, marginTop: 2 }}>Tap to add a price</Text> : null}
                 </Pressable>
                 {i.amount == null ? <View style={{ width: SP(1) }} /> : <Text style={{ fontFamily: F.bodyXBold, fontSize: 15, color: C.ink, marginLeft: SP(3) }}>{money(i.amount)}</Text>}
-                <View style={{ marginLeft: SP(3) }}><Btn label="✕" kind="danger" small onPress={() => db.unlinkItem(id, i.id).then(load)} /></View>
+                <View style={{ marginLeft: SP(2) }}><Btn label="✕" kind="danger" small onPress={() => db.unlinkItem(id, i.id).then(load)} /></View>
               </View>
             ))}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', backgroundColor: C.accentSoft, borderRadius: R.input, paddingHorizontal: SP(4), paddingVertical: SP(3), marginTop: SP(1) }}>
-              <Text style={{ fontFamily: F.bodyXBold, fontSize: 15, color: C.accent }}>Total added</Text>
+              <Text style={{ fontFamily: F.bodyXBold, fontSize: 15, color: C.accent }}>Total spent</Text>
               <Text style={{ fontFamily: F.displayMd, fontSize: 17, color: C.accent }}>{money(spent)}</Text>
             </View>
           </View>

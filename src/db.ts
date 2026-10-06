@@ -1,6 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export type Item = { id: number; name: string; amount: number | null; updated_at: number };
+export type TemplateItem = Item & { checked: boolean };
 export type Template = { id: number; name: string; budget: number; updated_at: number };
 export type TemplateRow = Template & { spent: number; items: number };
 export type LibraryItem = Item & { added: number };
@@ -79,6 +80,9 @@ PRAGMA foreign_keys = ON;`);
     const templateItemColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(template_items)');
     if (!templateItemColumns.some((column) => column.name === 'amount_override')) {
       await db.execAsync('ALTER TABLE template_items ADD COLUMN amount_override REAL CHECK(amount_override IS NULL OR amount_override > 0)');
+    }
+    if (!templateItemColumns.some((column) => column.name === 'checked')) {
+      await db.execAsync('ALTER TABLE template_items ADD COLUMN checked INTEGER NOT NULL DEFAULT 0');
     }
 
     const templateColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(templates)');
@@ -164,7 +168,7 @@ export const itemUsage = async (id: number) =>
 // --- Templates ---
 export const listTemplates = () =>
   db.getAllAsync<TemplateRow>(`
-    SELECT t.*, COALESCE(SUM(COALESCE(ti.amount_override, i.amount)), 0) spent, COUNT(ti.item_id) items
+    SELECT t.*, COALESCE(SUM(CASE WHEN ti.checked = 1 THEN COALESCE(ti.amount_override, i.amount) ELSE 0 END), 0) spent, COUNT(ti.item_id) items
     FROM templates t
     LEFT JOIN template_items ti ON ti.template_id = t.id
     LEFT JOIN items i ON i.id = ti.item_id
@@ -189,8 +193,8 @@ export async function duplicateTemplate(sourceId: number, name: string, budget: 
     const result = await db.runAsync('INSERT INTO templates(name, budget, updated_at) VALUES(?, ?, ?)', name.trim(), budget, Date.now());
     templateId = result.lastInsertRowId;
     await db.runAsync(
-      `INSERT INTO template_items(template_id, item_id, amount_override)
-       SELECT ?, item_id, amount_override FROM template_items WHERE template_id = ?`,
+      `INSERT INTO template_items(template_id, item_id, amount_override, checked)
+       SELECT ?, item_id, amount_override, checked FROM template_items WHERE template_id = ?`,
       templateId,
       sourceId
     );
@@ -229,8 +233,8 @@ export const getTemplate = (id: number) =>
 
 // --- Template <-> item links ---
 export const templateItems = (id: number) =>
-  db.getAllAsync<Item>(
-    `SELECT i.id, i.name, COALESCE(ti.amount_override, i.amount) amount, i.updated_at
+  db.getAllAsync<TemplateItem>(
+    `SELECT i.id, i.name, COALESCE(ti.amount_override, i.amount) amount, i.updated_at, ti.checked = 1 checked
      FROM items i
      JOIN template_items ti ON ti.item_id = i.id
      WHERE ti.template_id = ?
@@ -243,7 +247,7 @@ export const templateSpent = async (id: number) =>
     await db.getFirstAsync<{ s: number }>(
       `SELECT COALESCE(SUM(COALESCE(ti.amount_override, i.amount)), 0) s
        FROM template_items ti JOIN items i ON i.id = ti.item_id
-       WHERE ti.template_id = ?`,
+       WHERE ti.template_id = ? AND ti.checked = 1`,
       id
     )
   )!.s;
@@ -263,6 +267,11 @@ export async function linkItem(templateId: number, itemId: number) {
 
 export async function setTemplateItemAmount(templateId: number, itemId: number, amount: number) {
   await db.runAsync('UPDATE template_items SET amount_override = ? WHERE template_id = ? AND item_id = ?', amount, templateId, itemId);
+  await db.runAsync('UPDATE templates SET updated_at = ? WHERE id = ?', Date.now(), templateId);
+}
+
+export async function setTemplateItemChecked(templateId: number, itemId: number, checked: boolean) {
+  await db.runAsync('UPDATE template_items SET checked = ? WHERE template_id = ? AND item_id = ?', checked ? 1 : 0, templateId, itemId);
   await db.runAsync('UPDATE templates SET updated_at = ? WHERE id = ?', Date.now(), templateId);
 }
 
